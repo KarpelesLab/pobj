@@ -16,8 +16,10 @@ type Object struct {
 
 // ObjectActions defines generic factories for usage in API calls
 type ObjectActions struct {
-	Fetch *StaticMethod // Fetch action receives "id" and returns an instance (factory)
-	List  *StaticMethod // List action returns a list of object
+	Fetch  *StaticMethod // Fetch action receives "id" and returns an instance (factory)
+	List   *StaticMethod // List action returns a list of object
+	Clear  *StaticMethod // Clear action deletes all objects and returns nothing
+	Create *StaticMethod // Create action creates a new object and returns it
 }
 
 var (
