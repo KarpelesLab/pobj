@@ -7,12 +7,12 @@ import (
 )
 
 // Register adds the given object to the registry of name-instanciable objects
-func Register(name string, obj any) *Object {
+func Register[T any](name string) *Object {
 	o := lookup(name, true)
 	if o.typ != nil {
-		panic(fmt.Sprintf("multiple registrations for type %s (%T), existing = %+v", name, obj, o))
+		panic(fmt.Sprintf("multiple registrations for type %s (%T), existing = %+v", name, (*T)(nil), o))
 	}
-	o.typ = reflect.TypeOf(obj)
+	o.typ = reflect.TypeOf((*T)(nil))
 	for o.typ.Kind() == reflect.Pointer {
 		o.typ = o.typ.Elem()
 	}
@@ -44,12 +44,12 @@ func RegisterStatic(name string, fn any) {
 
 // RegisterActions is used for static REST methods such as get (factory) and
 // list. Methods such as update and delete require an object.
-func RegisterActions(name string, obj any, actions *ObjectActions) {
+func RegisterActions[T any](name string, actions *ObjectActions) {
 	o := lookup(name, true)
 	if o.typ != nil {
-		panic(fmt.Sprintf("multiple registrations for type %s (%T), existing = %+v", name, obj, o))
+		panic(fmt.Sprintf("multiple registrations for type %s (%T), existing = %+v", name, (*T)(nil), o))
 	}
-	o.typ = reflect.TypeOf(obj)
+	o.typ = reflect.TypeOf((*T)(nil))
 	for o.typ.Kind() == reflect.Pointer {
 		o.typ = o.typ.Elem()
 	}
