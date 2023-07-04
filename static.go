@@ -2,6 +2,7 @@ package pobj
 
 import (
 	"context"
+	"encoding"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -15,6 +16,15 @@ type StaticMethod struct {
 	arg    reflect.Type // type used for the argument to the method
 	argPtr bool         // is argument a ptr?
 }
+
+type valueScanner interface {
+	Scan(any) error
+}
+
+var (
+	textUnmarshalerType = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
+	valueScannerType    = reflect.TypeOf((*valueScanner)(nil)).Elem()
+)
 
 // Static returns a StaticMethod object for a func that accepts a context.Context and/or a
 // struct object that is its arguments.
@@ -108,30 +118,42 @@ func (s *StaticMethod) CallArg(ctx context.Context, arg any) (any, error) {
 				return s.parseResult(s.fn.Call(args))
 			}
 		}
-		if argIn.Kind() != reflect.Struct {
+
+		switch argIn.Kind() {
+		case reflect.Struct:
+			cnt := argIn.Type().NumField()
+			for i := 0; i < cnt; i++ {
+				inFld := argIn.Type().Field(i)
+				outFld, ok := argVE.Type().FieldByName(inFld.Name)
+				if !ok {
+					// ignore field... ?
+					continue
+				}
+				err := assignValueTo(argVE.Field(outFld.Index[0]), argIn.Field(i))
+				if err != nil {
+					return nil, err
+				}
+			}
+		case reflect.Map:
+			if argIn.Type().Key().Kind() != reflect.String {
+				return nil, fmt.Errorf("map key must be a string")
+			}
+			iter := argIn.MapRange()
+			for iter.Next() {
+				k := iter.Key()
+				outFld, ok := argVE.Type().FieldByName(k.String())
+				if !ok {
+					// ignore field
+					continue
+				}
+				err := assignValueTo(argVE.Field(outFld.Index[0]), iter.Value())
+				if err != nil {
+					return nil, err
+				}
+			}
+		default:
 			return nil, fmt.Errorf("arg must be a struct, %T passed", arg)
 		}
-
-		cnt := argIn.Type().NumField()
-		for i := 0; i < cnt; i++ {
-			inFld := argIn.Type().Field(i)
-			outFld, ok := argVE.Type().FieldByName(inFld.Name)
-			if !ok {
-				// ignore field... ?
-				continue
-			}
-			if inFld.Type.AssignableTo(outFld.Type) {
-				argVE.Field(outFld.Index[0]).Set(argIn.Field(i))
-				continue
-			}
-			if inFld.Type.ConvertibleTo(outFld.Type) {
-				v := argIn.Field(i).Convert(outFld.Type)
-				argVE.Field(outFld.Index[0]).Set(v)
-				continue
-			}
-			return nil, fmt.Errorf("incompatible field %s", inFld.Name)
-		}
-
 		if !s.argPtr {
 			argV = argV.Elem()
 		}
@@ -139,6 +161,32 @@ func (s *StaticMethod) CallArg(ctx context.Context, arg any) (any, error) {
 	}
 
 	return s.parseResult(s.fn.Call(args))
+}
+
+func assignValueTo(dst reflect.Value, src reflect.Value) error {
+	for src.Kind() == reflect.Interface {
+		src = src.Elem()
+	}
+	dstt := dst.Type()
+	srct := src.Type()
+
+	if srct.AssignableTo(dstt) {
+		dst.Set(src)
+		return nil
+	}
+	if srct.ConvertibleTo(dstt) {
+		dst.Set(src.Convert(dstt))
+		return nil
+	}
+	if dstt.Kind() == reflect.Pointer && dstt.Implements(valueScannerType) {
+		if dst.IsNil() {
+			dst.Set(reflect.New(dstt.Elem()))
+		}
+		return dst.Interface().(valueScanner).Scan(src.Interface())
+	} else if dst.CanAddr() && reflect.PointerTo(dstt).Implements(valueScannerType) {
+		return dst.Addr().Interface().(valueScanner).Scan(src.Interface())
+	}
+	return fmt.Errorf("incompatible source field type %#v assign to %#v", srct.Name(), dstt.Name())
 }
 
 var errTyp = reflect.TypeOf((*error)(nil)).Elem()
