@@ -26,6 +26,7 @@ var (
 	root = &Object{
 		children: make(map[string]*Object),
 	}
+	typLookup = make(map[reflect.Type]*Object)
 )
 
 func lookup(p string, create bool) *Object {
@@ -53,10 +54,29 @@ func lookup(p string, create bool) *Object {
 	return c
 }
 
+// Root returns the root object holder
 func Root() *Object {
 	return root
 }
 
+// Get returns the Object matching the given name, or nil if no such object exists
+func Get(name string) *Object {
+	return lookup(name, false)
+}
+
+// GetByType returns the Object matching the type given on the command line
+func GetByType[T any]() *Object {
+	t := reflect.TypeOf((*T)(nil))
+	for t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	if o, ok := typLookup[t]; ok {
+		return o
+	}
+	return nil
+}
+
+// New returns a new instance of the given object
 func (o *Object) New() any {
 	if o.typ == nil {
 		return nil
@@ -87,6 +107,7 @@ func (o *Object) Child(name string) *Object {
 	return res
 }
 
+// Static returns the given static method
 func (o *Object) Static(name string) *StaticMethod {
 	if o == nil {
 		return nil

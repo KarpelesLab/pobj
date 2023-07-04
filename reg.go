@@ -13,6 +13,10 @@ func Register(name string, obj any) *Object {
 		panic(fmt.Sprintf("multiple registrations for type %s (%T), existing = %+v", name, obj, o))
 	}
 	o.typ = reflect.TypeOf(obj)
+	for o.typ.Kind() == reflect.Pointer {
+		o.typ = o.typ.Elem()
+	}
+	typLookup[o.typ] = o
 	return o
 }
 
@@ -40,7 +44,15 @@ func RegisterStatic(name string, fn any) {
 
 // RegisterActions is used for static REST methods such as get (factory) and
 // list. Methods such as update and delete require an object.
-func RegisterActions(name string, actions *ObjectActions) {
+func RegisterActions(name string, obj any, actions *ObjectActions) {
 	o := lookup(name, true)
+	if o.typ != nil {
+		panic(fmt.Sprintf("multiple registrations for type %s (%T), existing = %+v", name, obj, o))
+	}
+	o.typ = reflect.TypeOf(obj)
+	for o.typ.Kind() == reflect.Pointer {
+		o.typ = o.typ.Elem()
+	}
+	typLookup[o.typ] = o
 	o.Action = actions
 }
