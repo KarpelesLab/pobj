@@ -120,10 +120,16 @@ func (s *StaticMethod) CallArg(ctx context.Context, arg any) (any, error) {
 				// ignore field... ?
 				continue
 			}
-			if !inFld.Type.AssignableTo(outFld.Type) {
-				return nil, fmt.Errorf("incompatible field %s", inFld.Name)
+			if inFld.Type.AssignableTo(outFld.Type) {
+				argVE.Field(outFld.Index[0]).Set(argIn.Field(i))
+				continue
 			}
-			argVE.Field(outFld.Index[0]).Set(argIn.Field(i))
+			if inFld.Type.ConvertibleTo(outFld.Type) {
+				v := argIn.Field(i).Convert(outFld.Type)
+				argVE.Field(outFld.Index[0]).Set(v)
+				continue
+			}
+			return nil, fmt.Errorf("incompatible field %s", inFld.Name)
 		}
 
 		if !s.argPtr {
