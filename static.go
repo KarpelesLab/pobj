@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+
+	"github.com/KarpelesLab/typutil"
 )
 
 type StaticMethod struct {
@@ -103,57 +105,11 @@ func (s *StaticMethod) CallArg(ctx context.Context, arg any) (any, error) {
 	}
 	if s.argPos != -1 {
 		argV := reflect.New(s.arg)
-		argVE := argV.Elem()
-
-		// index location of values
-		argIn := reflect.ValueOf(arg)
-		if argIn.Kind() == reflect.Ptr {
-			if argIn.IsNil() {
-				return s.parseResult(s.fn.Call(args))
-			}
-			argIn = argIn.Elem()
-		}
-		if argIn.Kind() == reflect.Interface {
-			if argIn.IsNil() {
-				return s.parseResult(s.fn.Call(args))
-			}
+		err := typutil.Assign(argV.Interface(), arg)
+		if err != nil {
+			return nil, err
 		}
 
-		switch argIn.Kind() {
-		case reflect.Struct:
-			cnt := argIn.Type().NumField()
-			for i := 0; i < cnt; i++ {
-				inFld := argIn.Type().Field(i)
-				outFld, ok := argVE.Type().FieldByName(inFld.Name)
-				if !ok {
-					// ignore field... ?
-					continue
-				}
-				err := assignValueTo(argVE.Field(outFld.Index[0]), argIn.Field(i))
-				if err != nil {
-					return nil, err
-				}
-			}
-		case reflect.Map:
-			if argIn.Type().Key().Kind() != reflect.String {
-				return nil, fmt.Errorf("map key must be a string")
-			}
-			iter := argIn.MapRange()
-			for iter.Next() {
-				k := iter.Key()
-				outFld, ok := argVE.Type().FieldByName(k.String())
-				if !ok {
-					// ignore field
-					continue
-				}
-				err := assignValueTo(argVE.Field(outFld.Index[0]), iter.Value())
-				if err != nil {
-					return nil, err
-				}
-			}
-		default:
-			return nil, fmt.Errorf("arg must be a struct, %T passed", arg)
-		}
 		if !s.argPtr {
 			argV = argV.Elem()
 		}
@@ -161,32 +117,6 @@ func (s *StaticMethod) CallArg(ctx context.Context, arg any) (any, error) {
 	}
 
 	return s.parseResult(s.fn.Call(args))
-}
-
-func assignValueTo(dst reflect.Value, src reflect.Value) error {
-	for src.Kind() == reflect.Interface {
-		src = src.Elem()
-	}
-	dstt := dst.Type()
-	srct := src.Type()
-
-	if srct.AssignableTo(dstt) {
-		dst.Set(src)
-		return nil
-	}
-	if srct.ConvertibleTo(dstt) {
-		dst.Set(src.Convert(dstt))
-		return nil
-	}
-	if dstt.Kind() == reflect.Pointer && dstt.Implements(valueScannerType) {
-		if dst.IsNil() {
-			dst.Set(reflect.New(dstt.Elem()))
-		}
-		return dst.Interface().(valueScanner).Scan(src.Interface())
-	} else if dst.CanAddr() && reflect.PointerTo(dstt).Implements(valueScannerType) {
-		return dst.Addr().Interface().(valueScanner).Scan(src.Interface())
-	}
-	return fmt.Errorf("incompatible source field type %#v assign to %#v", srct.Name(), dstt.Name())
 }
 
 var errTyp = reflect.TypeOf((*error)(nil)).Elem()

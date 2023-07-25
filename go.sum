@@ -1,0 +1,6 @@
+github.com/KarpelesLab/pjson v0.1.7 h1:j0EItKHyf/dXPZJXbMAS1Ioxlq1LTNH9YmPkmX/JN3s=
+github.com/KarpelesLab/pjson v0.1.7/go.mod h1:gb4uSTld7I2kO2WvLdat1mN1brsS1hzSR+dWw1hL3iU=
+github.com/KarpelesLab/typutil v0.1.8 h1:tHu+BtgU9zPbUZGXlzR0YzenDncOw+YEH74PCsisYc4=
+github.com/KarpelesLab/typutil v0.1.8/go.mod h1:2i3R0QUCDra36M80JD0lIq3yhnKiRjtQndtX5LYYXPU=
+github.com/KarpelesLab/typutil v0.1.9 h1:lUQr/oolCbgHlZTtI3PzElMecr+7hcoQz76XwHOYgOw=
+github.com/KarpelesLab/typutil v0.1.9/go.mod h1:2i3R0QUCDra36M80JD0lIq3yhnKiRjtQndtX5LYYXPU=
