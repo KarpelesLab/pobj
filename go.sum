@@ -10,3 +10,7 @@ github.com/KarpelesLab/typutil v0.1.12 h1:S4gNwMNMDn7/QluHXFqEf37VjrUVbZWp+oXPMR
 github.com/KarpelesLab/typutil v0.1.12/go.mod h1:2i3R0QUCDra36M80JD0lIq3yhnKiRjtQndtX5LYYXPU=
 github.com/KarpelesLab/typutil v0.1.14 h1:AUy2VIB7Igd97cynEQcMoru2nRCXjj37DeVJvyCElgI=
 github.com/KarpelesLab/typutil v0.1.14/go.mod h1:2i3R0QUCDra36M80JD0lIq3yhnKiRjtQndtX5LYYXPU=
+github.com/KarpelesLab/typutil v0.1.19 h1:kBwkANLv2Q9U/yCeCSbivrhxyt2DgjNpZ9HIDC19gjI=
+github.com/KarpelesLab/typutil v0.1.19/go.mod h1:HJ++cyFGBOggz++HO1YXx2jE+EQjjsEnOgJZGDOJxgU=
+golang.org/x/exp v0.0.0-20230905200255-921286631fa9 h1:GoHiUyI/Tp2nVkLI2mCxVkOjsbSXD66ic0XW0js0R9g=
+golang.org/x/exp v0.0.0-20230905200255-921286631fa9/go.mod h1:S2oDrQGGwySpoQPVqRShND87VCbxmc6bL1Yd2oYrm6k=

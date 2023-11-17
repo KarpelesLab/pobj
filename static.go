@@ -105,7 +105,7 @@ func (s *StaticMethod) CallArg(ctx context.Context, arg any) (any, error) {
 	}
 	if s.argPos != -1 {
 		argV := reflect.New(s.arg)
-		err := typutil.Assign(argV.Interface(), arg)
+		err := typutil.AssignReflect(argV, reflect.ValueOf(arg))
 		if err != nil {
 			return nil, err
 		}
