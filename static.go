@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding"
 	"encoding/json"
-	"fmt"
 	"reflect"
 
 	"github.com/KarpelesLab/typutil"
@@ -12,20 +11,15 @@ import (
 
 type StaticMethod struct {
 	fn     reflect.Value
-	cnt    int          // number of actual args
-	ctxPos int          // pos of ctx argument, or -1
-	argPos int          // pos of arguments, or -1
-	arg    reflect.Type // type used for the argument to the method
-	argPtr bool         // is argument a ptr?
-}
-
-type valueScanner interface {
-	Scan(any) error
+	cnt    int            // number of actual args
+	ctxPos int            // pos of ctx argument, or -1
+	argPos []int          // pos of arguments, or nil
+	arg    []reflect.Type // type used for the argument to the method
 }
 
 var (
 	textUnmarshalerType = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
-	valueScannerType    = reflect.TypeOf((*valueScanner)(nil)).Elem()
+	ctxTyp              = reflect.TypeOf((*context.Context)(nil)).Elem()
 )
 
 // Static returns a StaticMethod object for a func that accepts a context.Context and/or a
@@ -37,10 +31,9 @@ func Static(method any) *StaticMethod {
 	}
 
 	typ := v.Type()
-	res := &StaticMethod{fn: v, ctxPos: -1, argPos: -1, cnt: typ.NumIn()}
+	res := &StaticMethod{fn: v, ctxPos: -1, cnt: typ.NumIn()}
 
 	ni := res.cnt
-	ctxTyp := reflect.TypeOf((*context.Context)(nil)).Elem()
 
 	for i := 0; i < ni; i += 1 {
 		in := typ.In(i)
@@ -51,19 +44,8 @@ func Static(method any) *StaticMethod {
 			res.ctxPos = i
 			continue
 		}
-		if in.Kind() == reflect.Ptr {
-			in = in.Elem()
-			res.argPtr = true
-		}
-		if in.Kind() == reflect.Struct {
-			if res.argPos != -1 {
-				panic("method taking multiple arg arguments")
-			}
-			res.argPos = i
-			res.arg = in
-			continue
-		}
-		panic(fmt.Sprintf("method has unknown type of argument %s", in))
+		res.argPos = append(res.argPos, i)
+		res.arg = append(res.arg, in)
 	}
 
 	return res
@@ -71,49 +53,42 @@ func Static(method any) *StaticMethod {
 
 func (s *StaticMethod) Call(ctx context.Context) (any, error) {
 	// call this function
-	args := make([]reflect.Value, s.cnt)
-
-	if s.ctxPos != -1 {
-		args[s.ctxPos] = reflect.ValueOf(ctx)
-	}
-	if s.argPos != -1 {
-		argV := reflect.New(s.arg)
-
+	if len(s.argPos) > 0 {
 		// grab input json, call json.Unmarshal on argV
 		input, ok := ctx.Value("input_json").(json.RawMessage)
 		if ok {
-			err := json.Unmarshal(input, argV.Interface())
+			argV := reflect.New(s.arg[0]).Interface()
+
+			err := json.Unmarshal(input, argV)
 			if err != nil {
 				return nil, err
 			}
+			if len(s.argPos) > 1 {
+				if argArray, ok := argV.([]any); ok {
+					return s.CallArg(ctx, argArray...)
+				}
+			}
+			return s.CallArg(ctx, argV)
 		}
-
-		if !s.argPtr {
-			argV = argV.Elem()
-		}
-		args[s.argPos] = argV
 	}
 
-	return s.parseResult(s.fn.Call(args))
+	return s.CallArg(ctx)
 }
 
-func (s *StaticMethod) CallArg(ctx context.Context, arg any) (any, error) {
+func (s *StaticMethod) CallArg(ctx context.Context, arg ...any) (any, error) {
 	// call this function but pass arg values
 	args := make([]reflect.Value, s.cnt)
 	if s.ctxPos != -1 {
 		args[s.ctxPos] = reflect.ValueOf(ctx)
 	}
-	if s.argPos != -1 {
-		argV := reflect.New(s.arg)
-		err := typutil.AssignReflect(argV, reflect.ValueOf(arg))
+	for argN, pos := range s.argPos {
+		argV := reflect.New(s.arg[argN])
+		err := typutil.AssignReflect(argV, reflect.ValueOf(arg[argN]))
 		if err != nil {
 			return nil, err
 		}
 
-		if !s.argPtr {
-			argV = argV.Elem()
-		}
-		args[s.argPos] = argV
+		args[pos] = argV.Elem()
 	}
 
 	return s.parseResult(s.fn.Call(args))
@@ -131,4 +106,12 @@ func (s *StaticMethod) parseResult(res []reflect.Value) (output any, err error) 
 		output = v.Interface()
 	}
 	return
+}
+
+func Call[T any](s *StaticMethod, ctx context.Context, arg ...any) (T, error) {
+	res, err := s.CallArg(ctx, arg...)
+	if v, ok := res.(T); ok {
+		return v, err
+	}
+	return reflect.New(reflect.TypeFor[T]()).Elem().Interface().(T), nil
 }

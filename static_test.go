@@ -68,6 +68,20 @@ func TestStaticParam(t *testing.T) {
 	}
 }
 
+func TestStaticParams(t *testing.T) {
+	add := func(a, b int) (int, error) {
+		return a + b, nil
+	}
+	st := pobj.Static(add)
+
+	res, err := pobj.Call[int](st, context.Background(), 1, 2)
+	if err != nil {
+		t.Errorf("error returned: %s", err)
+	} else if res != 3 {
+		t.Errorf("error, got 1 + 2 = %d", res)
+	}
+}
+
 type scannableObject struct {
 	A string
 }
