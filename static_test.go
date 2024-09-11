@@ -2,6 +2,7 @@ package pobj_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -79,6 +80,16 @@ func TestStaticParams(t *testing.T) {
 		t.Errorf("error returned: %s", err)
 	} else if res != 3 {
 		t.Errorf("error, got 1 + 2 = %d", res)
+	}
+
+	// test with input_json
+	ctx := context.WithValue(context.Background(), "input_json", json.RawMessage("[3,4]"))
+
+	resAny, err := st.Call(ctx)
+	if err != nil {
+		t.Errorf("error returned: %s", err)
+	} else if resAny.(int) != 7 {
+		t.Errorf("error, got 3 + 4 = %d", resAny)
 	}
 }
 

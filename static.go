@@ -52,23 +52,24 @@ func Static(method any) *StaticMethod {
 }
 
 func (s *StaticMethod) Call(ctx context.Context) (any, error) {
-	// call this function
+	// call this function, typically fetching request body from the context via input_json
 	if len(s.argPos) > 0 {
 		// grab input json, call json.Unmarshal on argV
 		input, ok := ctx.Value("input_json").(json.RawMessage)
 		if ok {
-			argV := reflect.New(s.arg[0]).Interface()
-
-			err := json.Unmarshal(input, argV)
-			if err != nil {
-				return nil, err
-			}
 			if len(s.argPos) > 1 {
-				if argArray, ok := argV.([]any); ok {
-					return s.CallArg(ctx, argArray...)
+				var args []typutil.RawJsonMessage
+				err := json.Unmarshal(input, &args)
+				if err != nil {
+					return nil, err
 				}
+				anyArgs := make([]any, len(args))
+				for n, v := range args {
+					anyArgs[n] = v
+				}
+				return s.CallArg(ctx, anyArgs...)
 			}
-			return s.CallArg(ctx, argV)
+			return s.CallArg(ctx, typutil.RawJsonMessage(input))
 		}
 	}
 
@@ -92,6 +93,17 @@ func (s *StaticMethod) CallArg(ctx context.Context, arg ...any) (any, error) {
 	}
 
 	return s.parseResult(s.fn.Call(args))
+}
+
+func (s *StaticMethod) IsStringArg(n int) bool {
+	return s.ArgKind(n) == reflect.String
+}
+
+func (s *StaticMethod) ArgKind(n int) reflect.Kind {
+	if n >= len(s.arg) {
+		return reflect.Invalid
+	}
+	return s.arg[n].Kind()
 }
 
 var errTyp = reflect.TypeOf((*error)(nil)).Elem()

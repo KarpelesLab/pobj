@@ -13,6 +13,9 @@ func (o *Object) ById(ctx context.Context, id string) (any, error) {
 	if get == nil {
 		return nil, ErrMissingAction
 	}
+	if get.IsStringArg(0) {
+		return get.CallArg(ctx, id)
+	}
 	return get.CallArg(ctx, struct{ Id string }{Id: id})
 }
 
