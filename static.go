@@ -2,7 +2,6 @@ package pobj
 
 import (
 	"context"
-	"encoding"
 	"encoding/json"
 	"reflect"
 
@@ -18,8 +17,7 @@ type StaticMethod struct {
 }
 
 var (
-	textUnmarshalerType = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
-	ctxTyp              = reflect.TypeOf((*context.Context)(nil)).Elem()
+	ctxTyp = reflect.TypeOf((*context.Context)(nil)).Elem()
 )
 
 // Static returns a StaticMethod object for a func that accepts a context.Context and/or a
