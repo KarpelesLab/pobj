@@ -4,7 +4,7 @@ go 1.22.0
 
 toolchain go1.23.0
 
-require github.com/KarpelesLab/typutil v0.2.18
+require github.com/KarpelesLab/typutil v0.2.19
 
 require (
 	github.com/KarpelesLab/pjson v0.1.9 // indirect

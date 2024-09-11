@@ -3,23 +3,25 @@ package pobj
 import (
 	"reflect"
 	"strings"
+
+	"github.com/KarpelesLab/typutil"
 )
 
 type Object struct {
 	name     string
 	typ      reflect.Type
 	children map[string]*Object
-	static   map[string]*StaticMethod
+	static   map[string]*typutil.Callable
 	Action   *ObjectActions
 	parent   *Object
 }
 
 // ObjectActions defines generic factories for usage in API calls
 type ObjectActions struct {
-	Fetch  *StaticMethod // Fetch action receives "id" and returns an instance (factory)
-	List   *StaticMethod // List action returns a list of object
-	Clear  *StaticMethod // Clear action deletes all objects and returns nothing
-	Create *StaticMethod // Create action creates a new object and returns it
+	Fetch  *typutil.Callable // Fetch action receives "id" and returns an instance (factory)
+	List   *typutil.Callable // List action returns a list of object
+	Clear  *typutil.Callable // Clear action deletes all objects and returns nothing
+	Create *typutil.Callable // Create action creates a new object and returns it
 }
 
 var (
@@ -108,7 +110,7 @@ func (o *Object) Child(name string) *Object {
 }
 
 // Static returns the given static method
-func (o *Object) Static(name string) *StaticMethod {
+func (o *Object) Static(name string) *typutil.Callable {
 	if o == nil {
 		return nil
 	}

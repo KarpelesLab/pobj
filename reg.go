@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/KarpelesLab/typutil"
 )
 
 // Register adds the given object to the registry of name-instanciable objects
@@ -27,7 +29,7 @@ func RegisterStatic(name string, fn any) {
 		panic(fmt.Sprintf("invalid name %s for static method", name))
 	}
 
-	static := Static(fn)
+	static := typutil.Func(fn)
 	if static == nil {
 		panic(fmt.Sprintf("invalid static method %T", fn))
 	}
@@ -36,7 +38,7 @@ func RegisterStatic(name string, fn any) {
 	name = name[pos+1:]
 
 	if o.static == nil {
-		o.static = make(map[string]*StaticMethod)
+		o.static = make(map[string]*typutil.Callable)
 	}
 
 	o.static[name] = static
