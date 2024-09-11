@@ -10,11 +10,11 @@ import (
 )
 
 type StaticMethod struct {
-	fn     reflect.Value
-	cnt    int            // number of actual args
-	ctxPos int            // pos of ctx argument, or -1
-	argPos []int          // pos of arguments, or nil
-	arg    []reflect.Type // type used for the argument to the method
+	fn       reflect.Value
+	cnt      int            // number of actual args
+	ctxPos   int            // pos of ctx argument, or -1
+	arg      []reflect.Type // type used for the argument to the method
+	variadic bool           // is the func's last argument a ...
 }
 
 var (
@@ -31,7 +31,7 @@ func Static(method any) *StaticMethod {
 	}
 
 	typ := v.Type()
-	res := &StaticMethod{fn: v, ctxPos: -1, cnt: typ.NumIn()}
+	res := &StaticMethod{fn: v, ctxPos: -1, cnt: typ.NumIn(), variadic: typ.IsVariadic()}
 
 	ni := res.cnt
 
@@ -42,22 +42,27 @@ func Static(method any) *StaticMethod {
 				panic("method taking multiple ctx arguments")
 			}
 			res.ctxPos = i
+			res.cnt -= 1
 			continue
 		}
-		res.argPos = append(res.argPos, i)
 		res.arg = append(res.arg, in)
 	}
 
 	return res
 }
 
+// Call invokes the method without any argument. If the method expects some kind of argument, Call will attempt
+// to get input_json from the context, and if obtained it will be parsed and passed as argument to the method.
 func (s *StaticMethod) Call(ctx context.Context) (any, error) {
 	// call this function, typically fetching request body from the context via input_json
-	if len(s.argPos) > 0 {
+	if s.cnt > 0 {
 		// grab input json, call json.Unmarshal on argV
 		input, ok := ctx.Value("input_json").(json.RawMessage)
 		if ok {
-			if len(s.argPos) > 1 {
+			if s.cnt > 1 {
+				// if the method take multiple arguments, the json value must be an array. By using RawMessage we
+				// ensure we only parse the array part here, and not the contents, so it can be parsed for each
+				// relevant argument type directly
 				var args []typutil.RawJsonMessage
 				err := json.Unmarshal(input, &args)
 				if err != nil {
@@ -76,20 +81,45 @@ func (s *StaticMethod) Call(ctx context.Context) (any, error) {
 	return s.CallArg(ctx)
 }
 
+// CallArg calls the method with the specified arguments. If less arguments are provided than required, an error will be raised.
 func (s *StaticMethod) CallArg(ctx context.Context, arg ...any) (any, error) {
-	// call this function but pass arg values
-	args := make([]reflect.Value, s.cnt)
-	if s.ctxPos != -1 {
-		args[s.ctxPos] = reflect.ValueOf(ctx)
+	if len(arg) < s.cnt {
+		// not enough arguments to cover cnt
+		return nil, ErrMissingArgs
 	}
-	for argN, pos := range s.argPos {
-		argV := reflect.New(s.arg[argN])
-		err := typutil.AssignReflect(argV, reflect.ValueOf(arg[argN]))
+	if len(arg) > s.cnt && !s.variadic {
+		return nil, errTooManyArgs
+	}
+	// call this function but pass arg values
+	var args []reflect.Value
+	var ctxPos int
+
+	if s.ctxPos != -1 {
+		args = make([]reflect.Value, len(arg)+1)
+		args[s.ctxPos] = reflect.ValueOf(ctx)
+		ctxPos = s.ctxPos
+	} else {
+		args = make([]reflect.Value, len(arg))
+		ctxPos = len(arg) + 1
+	}
+
+	for argN, v := range arg {
+		var argV reflect.Value
+		if argN >= len(s.arg) {
+			argV = reflect.New(s.arg[len(s.arg)-1])
+		} else {
+			argV = reflect.New(s.arg[argN])
+		}
+		err := typutil.AssignReflect(argV, reflect.ValueOf(v))
 		if err != nil {
 			return nil, err
 		}
 
-		args[pos] = argV.Elem()
+		if argN >= ctxPos {
+			args[argN+1] = argV.Elem()
+		} else {
+			args[argN] = argV.Elem()
+		}
 	}
 
 	return s.parseResult(s.fn.Call(args))
