@@ -8,7 +8,11 @@ import (
 	"github.com/KarpelesLab/typutil"
 )
 
-// Register adds the given object to the registry of name-instanciable objects
+// Register adds a type to the registry with the given name.
+// The type T is determined by the generic parameter.
+// Name can be a path using '/' as separator for nested object registration.
+// Returns the registered Object for further configuration.
+// Panics if the name is already registered with a different type.
 func Register[T any](name string) *Object {
 	o := lookup(name, true)
 	if o.typ != nil {
@@ -22,7 +26,12 @@ func Register[T any](name string) *Object {
 	return o
 }
 
-// RegisterStatic adds a static method to an object
+// RegisterStatic adds a static method to an object.
+// The name must be in the format "object/path:methodName" where:
+// - "object/path" is the registered object's path
+// - "methodName" is the name of the static method
+// The function fn will be converted to a callable using typutil.Func.
+// Panics if the name format is invalid or the function cannot be converted.
 func RegisterStatic(name string, fn any) {
 	pos := strings.IndexByte(name, ':')
 	if pos == -1 {
@@ -44,8 +53,11 @@ func RegisterStatic(name string, fn any) {
 	o.static[name] = static
 }
 
-// RegisterActions is used for static REST methods such as get (factory) and
-// list. Methods such as update and delete require an object.
+// RegisterActions registers a type with associated actions for API operations.
+// The actions include common operations like Fetch, List, Clear, and Create.
+// Similar to Register, but also associates the ObjectActions with the registered type.
+// Intended for implementing REST-like operations on the registered type.
+// Panics if the name is already registered with a different type.
 func RegisterActions[T any](name string, actions *ObjectActions) {
 	o := lookup(name, true)
 	if o.typ != nil {
