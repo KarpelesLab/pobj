@@ -2,7 +2,7 @@ package pobj
 
 import "errors"
 
-// Package errors provide specific error types for common failure cases
+// Sentinel errors for common failure cases.
 var (
 	// ErrUnknownType is returned when trying to get an object by a type
 	// that hasn't been registered with the package. This typically occurs

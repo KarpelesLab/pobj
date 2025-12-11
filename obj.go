@@ -22,12 +22,13 @@ type Object struct {
 	parent   *Object                      // Parent object in the hierarchy
 }
 
-// ObjectActions defines generic factories for usage in API calls
+// ObjectActions defines callable factories for REST-like API operations.
+// Each action is optional and can be set to nil if not needed.
 type ObjectActions struct {
-	Fetch  *typutil.Callable // Fetch action receives "id" and returns an instance (factory)
-	List   *typutil.Callable // List action returns a list of objects
-	Clear  *typutil.Callable // Clear action deletes all objects and returns nothing
-	Create *typutil.Callable // Create action creates a new object and returns it
+	Fetch  *typutil.Callable // Fetch retrieves a single object by ID
+	List   *typutil.Callable // List returns all objects of this type
+	Clear  *typutil.Callable // Clear deletes all objects of this type
+	Create *typutil.Callable // Create instantiates a new object
 }
 
 var (
