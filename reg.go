@@ -14,6 +14,8 @@ import (
 // Returns the registered Object for further configuration.
 // Panics if the name is already registered with a different type.
 func Register[T any](name string) *Object {
+	mu.Lock()
+	defer mu.Unlock()
 	o := lookup(name, true)
 	if o.typ != nil {
 		panic(fmt.Sprintf("multiple registrations for type %s (%T), existing = %+v", name, (*T)(nil), o))
@@ -43,6 +45,8 @@ func RegisterStatic(name string, fn any) {
 		panic(fmt.Sprintf("invalid static method %T", fn))
 	}
 
+	mu.Lock()
+	defer mu.Unlock()
 	o := lookup(name[:pos], true)
 	name = name[pos+1:]
 
@@ -59,6 +63,8 @@ func RegisterStatic(name string, fn any) {
 // Intended for implementing REST-like operations on the registered type.
 // Panics if the name is already registered with a different type.
 func RegisterActions[T any](name string, actions *ObjectActions) {
+	mu.Lock()
+	defer mu.Unlock()
 	o := lookup(name, true)
 	if o.typ != nil {
 		panic(fmt.Sprintf("multiple registrations for type %s (%T), existing = %+v", name, (*T)(nil), o))

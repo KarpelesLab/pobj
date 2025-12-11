@@ -6,6 +6,7 @@ package pobj
 import (
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/KarpelesLab/typutil"
 )
@@ -36,11 +37,14 @@ var (
 	}
 	// typLookup provides direct access to objects by their reflected type
 	typLookup = make(map[reflect.Type]*Object)
+	// mu protects access to root and typLookup
+	mu sync.RWMutex
 )
 
 // lookup finds an Object by its path in the hierarchy.
 // If create is true, it will create missing objects along the path.
 // Paths use '/' as a separator, e.g. "user/admin" to locate nested objects.
+// Caller must hold appropriate lock (read lock if create=false, write lock if create=true).
 func lookup(p string, create bool) *Object {
 	c := root
 
@@ -69,12 +73,16 @@ func lookup(p string, create bool) *Object {
 // Root returns the root object holder, which is the top-level object
 // in the hierarchical registry.
 func Root() *Object {
+	mu.RLock()
+	defer mu.RUnlock()
 	return root
 }
 
 // Get returns the Object matching the given name, or nil if no such object exists.
 // The name can be a path using '/' as separator for nested objects.
 func Get(name string) *Object {
+	mu.RLock()
+	defer mu.RUnlock()
 	return lookup(name, false)
 }
 
@@ -86,6 +94,8 @@ func GetByType[T any]() *Object {
 	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
+	mu.RLock()
+	defer mu.RUnlock()
 	if o, ok := typLookup[t]; ok {
 		return o
 	}
