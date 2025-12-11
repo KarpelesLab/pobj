@@ -2,6 +2,7 @@ package pobj_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/KarpelesLab/pobj"
@@ -51,19 +52,9 @@ func TestEdgeCases(t *testing.T) {
 
 		// Check that the error message contains expected information
 		expectedErrSubstring := "bad type returned by Fetch"
-		if err != nil && !contains(err.Error(), expectedErrSubstring) {
+		if err != nil && !strings.Contains(err.Error(), expectedErrSubstring) {
 			t.Errorf("Error doesn't contain expected substring. Got: %v, want to contain: %s",
 				err, expectedErrSubstring)
 		}
 	})
-}
-
-// Helper function to check if a string contains a substring
-func contains(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }

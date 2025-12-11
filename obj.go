@@ -157,3 +157,28 @@ func (o *Object) Static(name string) *typutil.Callable {
 	}
 	return res
 }
+
+// Children returns the names of all direct child objects.
+// Returns nil if the object has no children.
+func (o *Object) Children() []string {
+	if o == nil || o.children == nil {
+		return nil
+	}
+	res := make([]string, 0, len(o.children))
+	for name := range o.children {
+		res = append(res, name)
+	}
+	return res
+}
+
+// All returns all registered Objects that have an associated type.
+// This can be used for introspection and debugging.
+func All() []*Object {
+	mu.RLock()
+	defer mu.RUnlock()
+	res := make([]*Object, 0, len(typLookup))
+	for _, o := range typLookup {
+		res = append(res, o)
+	}
+	return res
+}

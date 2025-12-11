@@ -165,6 +165,7 @@ Methods:
 - `New() any` - Create a new instance of the registered type
 - `String() string` - Get the full path name
 - `Child(name string) *Object` - Get a direct child object
+- `Children() []string` - Get names of all direct children
 - `Static(name string) *typutil.Callable` - Get a registered static method
 - `ById(ctx context.Context, id string) (any, error)` - Fetch instance by ID
 
@@ -186,11 +187,12 @@ type ObjectActions struct {
 | Function | Description |
 |----------|-------------|
 | `Register[T any](name string) *Object` | Register a type with a path name |
-| `RegisterActions[T any](name string, actions *ObjectActions)` | Register a type with actions |
+| `RegisterActions[T any](name string, actions *ObjectActions) *Object` | Register a type with actions |
 | `RegisterStatic(name string, fn any)` | Register a static method (`path:method` format) |
 | `Get(name string) *Object` | Get object by path (returns nil if not found) |
 | `GetByType[T any]() *Object` | Get object by generic type |
 | `Root() *Object` | Get the root of the hierarchy |
+| `All() []*Object` | Get all registered objects (for introspection) |
 | `ById[T any](ctx, id string) (*T, error)` | Type-safe fetch by ID |
 
 ### Errors

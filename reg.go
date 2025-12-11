@@ -61,8 +61,9 @@ func RegisterStatic(name string, fn any) {
 // The actions include common operations like Fetch, List, Clear, and Create.
 // Similar to Register, but also associates the ObjectActions with the registered type.
 // Intended for implementing REST-like operations on the registered type.
+// Returns the registered Object for further configuration.
 // Panics if the name is already registered with a different type.
-func RegisterActions[T any](name string, actions *ObjectActions) {
+func RegisterActions[T any](name string, actions *ObjectActions) *Object {
 	mu.Lock()
 	defer mu.Unlock()
 	o := lookup(name, true)
@@ -75,4 +76,5 @@ func RegisterActions[T any](name string, actions *ObjectActions) {
 	}
 	typLookup[o.typ] = o
 	o.Action = actions
+	return o
 }
