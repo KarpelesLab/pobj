@@ -243,3 +243,50 @@ func TestChild(t *testing.T) {
 		}
 	})
 }
+
+func TestObjectDocumentation(t *testing.T) {
+	// Register an object with documentation
+	obj := pobj.Register[struct{}]("test/object-doc").
+		SetDoc("This object represents a test entity for documentation purposes")
+
+	if obj == nil {
+		t.Fatal("Register returned nil")
+	}
+
+	// Verify the documentation is stored
+	if obj.Doc() != "This object represents a test entity for documentation purposes" {
+		t.Errorf("Wrong doc, got %q", obj.Doc())
+	}
+
+	// Verify it's retrievable via Get
+	retrieved := pobj.Get("test/object-doc")
+	if retrieved == nil {
+		t.Fatal("Failed to get object")
+	}
+
+	if retrieved.Doc() != "This object represents a test entity for documentation purposes" {
+		t.Errorf("Retrieved object has wrong doc, got %q", retrieved.Doc())
+	}
+}
+
+func TestNilObjectSafety(t *testing.T) {
+	var nilObj *pobj.Object
+
+	// Doc methods should handle nil safely
+	if nilObj.Doc() != "" {
+		t.Error("Doc() on nil should return empty string")
+	}
+
+	if nilObj.SetDoc("test") != nil {
+		t.Error("SetDoc() on nil should return nil")
+	}
+
+	// Method and Methods should handle nil safely
+	if nilObj.Method("anything") != nil {
+		t.Error("Method() on nil should return nil")
+	}
+
+	if nilObj.Methods() != nil {
+		t.Error("Methods() on nil should return nil")
+	}
+}

@@ -34,27 +34,50 @@ func Register[T any](name string) *Object {
 // - "methodName" is the name of the static method
 // The function fn will be converted to a callable using typutil.Func.
 // Panics if the name format is invalid or the function cannot be converted.
+// Deprecated: Use RegisterMethod instead which returns *Method for chaining.
 func RegisterStatic(name string, fn any) {
+	RegisterMethod(name, fn)
+}
+
+// RegisterMethod adds a method to an object and returns the Method for further configuration.
+// The name must be in the format "object/path:methodName" where:
+// - "object/path" is the registered object's path
+// - "methodName" is the name of the method
+// The function fn will be converted to a callable using typutil.Func.
+// Panics if the name format is invalid or the function cannot be converted.
+//
+// The returned Method can be used to set documentation and other properties:
+//
+//	pobj.RegisterMethod("User:getByEmail", getByEmail).
+//	    SetDoc("Fetch a user by their email address").
+//	    SetRequiresInstance(false)
+func RegisterMethod(name string, fn any) *Method {
 	pos := strings.IndexByte(name, ':')
 	if pos == -1 {
-		panic(fmt.Sprintf("invalid name %s for static method", name))
+		panic(fmt.Sprintf("invalid name %s for method", name))
 	}
 
-	static := typutil.Func(fn)
-	if static == nil {
-		panic(fmt.Sprintf("invalid static method %T", fn))
+	callable := typutil.Func(fn)
+	if callable == nil {
+		panic(fmt.Sprintf("invalid method %T", fn))
 	}
 
 	mu.Lock()
 	defer mu.Unlock()
 	o := lookup(name[:pos], true)
-	name = name[pos+1:]
+	methodName := name[pos+1:]
 
-	if o.static == nil {
-		o.static = make(map[string]*typutil.Callable)
+	if o.methods == nil {
+		o.methods = make(map[string]*Method)
 	}
 
-	o.static[name] = static
+	m := &Method{
+		callable: callable,
+		object:   o,
+		name:     methodName,
+	}
+	o.methods[methodName] = m
+	return m
 }
 
 // RegisterActions registers a type with associated actions for API operations.
